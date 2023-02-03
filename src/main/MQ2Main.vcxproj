@@ -583,6 +583,7 @@
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\ConfigUtils.h" />
     <ClInclude Include="..\common\HotKeys.h" />
+    <ClInclude Include="..\common\Mailbox.h" />
     <ClInclude Include="..\common\NamedPipes.h" />
     <ClInclude Include="..\common\MiscUtils.h" />
     <ClInclude Include="..\common\ProtoPipes.h" />
@@ -639,6 +640,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\resources\CHANGELOG.md" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\data\resources\GPL.txt" />

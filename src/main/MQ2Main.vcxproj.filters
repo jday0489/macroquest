@@ -568,6 +568,9 @@
     <ClInclude Include="..\common\ProtoPipes.h">
       <Filter>Header Files\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\common\Mailbox.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\mq\api\Spawns.h">
       <Filter>Header Files\mq\api</Filter>
     </ClInclude>
@@ -597,6 +600,7 @@
     <None Include="..\..\data\resources\CHANGELOG.md">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <NASM Include="AssemblyFunctions64.asm">
