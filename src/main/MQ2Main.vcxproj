@@ -525,7 +525,7 @@
     <ClCompile Include="MQ2Mouse.cpp" />
     <ClCompile Include="ImGuiOverlay.cpp" />
     <ClCompile Include="MQ2ParseAPI.cpp" />
-    <ClCompile Include="PipeClient.cpp" />
+    <ClCompile Include="MQ2PostOffice.cpp" />
     <ClCompile Include="MQ2PluginHandler.cpp" />
     <ClCompile Include="MQ2Pulse.cpp" />
     <ClCompile Include="MQ2Spawns.cpp" />
@@ -606,7 +606,7 @@
     <ClInclude Include="MQ2Utilities.h" />
     <ClInclude Include="MQVersionInfo.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="PipeClient.h" />
+    <ClInclude Include="MQ2PostOffice.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

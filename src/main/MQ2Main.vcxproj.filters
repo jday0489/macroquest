@@ -326,7 +326,7 @@
     <ClCompile Include="MQ2DeveloperTools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PipeClient.cpp">
+    <ClCompile Include="MQ2PostOffice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MQ2Items.cpp">
@@ -520,7 +520,7 @@
     <ClInclude Include="..\..\include\mq\base\Detours.h">
       <Filter>Header Files\mq\base</Filter>
     </ClInclude>
-    <ClInclude Include="PipeClient.h">
+    <ClInclude Include="MQ2PostOffice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\mq\base\Config.h">
