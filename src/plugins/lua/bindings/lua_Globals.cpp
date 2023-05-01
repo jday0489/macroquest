@@ -52,6 +52,17 @@ void RegisterBindings_Globals(LuaThread* thread, sol::state_view state)
 
 		WriteChatColorf("%s", USERCOLOR_CHAT_CHANNEL, message.c_str());
 	};
+
+	//----------------------------------------------------------------------------
+	// Internal helpers
+
+	sol::function arginfo = state.script(R"(
+		return function(f)
+			local info = debug.getinfo(f, "nu")
+			return info.name or 'unknown', info.namewhat or 'unk', info.nparams or -1, info.isvararg or false
+		end
+	)");
+	state.set_function("__command_arginfo", arginfo);
 }
 
 } // namespace mq::lua::bindings
