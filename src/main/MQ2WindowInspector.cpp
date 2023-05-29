@@ -2952,6 +2952,7 @@ class WindowInspector : public ImGuiWindowBase
 	ImGuiID m_bottomNode = 0;
 	bool m_firstTime = true;
 	ImGuiID m_mainDockId = 0;
+	bool m_showXMLDataBrowser = false;
 
 public:
 	WindowInspector()
@@ -3022,10 +3023,22 @@ public:
 
 		if (m_open)
 		{
-			bool doShow = ImGui::Begin("Window Inspector", m_open.get_ptr());
+			bool doShow = ImGui::Begin("Window Inspector", m_open.get_ptr(), ImGuiWindowFlags_MenuBar);
 			m_open.Update();
 			if (doShow)
 			{
+				if (ImGui::BeginMenuBar())
+				{
+					if (ImGui::BeginMenu("Tools"))
+					{
+						ImGui::MenuItem("XML Data Browser", nullptr, &m_showXMLDataBrowser);
+
+						ImGui::EndMenu();
+					}
+
+					ImGui::EndMenuBar();
+				}
+
 				if (m_picking)
 				{
 					// Don't pick anything if the mouse is out of the viewport. This check
@@ -3168,6 +3181,11 @@ public:
 
 		// Update background overlay showing whats currently highlighted or selected
 		DrawBackgroundWindowHighlights();
+
+		if (m_showXMLDataBrowser)
+		{
+			DrawXMLDataBrowser();
+		}
 	}
 
 	void ShowWindowInspector(CXWnd* pWnd, bool isSelected = false)
@@ -3536,11 +3554,6 @@ public:
 	void SetSelectedWindow(CXWnd* pWnd)
 	{
 		m_pSelectedWnd = pWnd;
-	}
-
-	void SetHoveredWindow(CXWnd* pWnd)
-	{
-		m_pHoveredWnd = pWnd;
 	}
 };
 static WindowInspector* s_windowInspector = nullptr;
