@@ -15,8 +15,9 @@
 // For list of changes, see CHANGELOG.md
 
 #include <mq/Plugin.h>
+#include <mq/proto/Routing.h>
 
-#include "AutoLoginShared.h"
+#include "autologin/AutoLogin.h"
 #include "MQ2AutoLogin.h"
 
 #include <imgui.h>
@@ -40,14 +41,97 @@ constexpr int STEP_DELAY = 1000;
 
 fs::path CustomIni;
 uint64_t ReenableTime = 0;
+std::shared_ptr<mailbox::PostOffice::Mailbox> s_autologinMailbox;
 
 // save off class and level so we know when to push updates
 int Level = -1;
 int Class = -1;
 
+template <typename T>
+static void Post(AutoLoginMessageId messageId, const T& data)
+{
+	proto::Address address;
+	address.set_name("launcher");
+	address.set_mailbox("autologin");
+
+	s_autologinMailbox->Post(address, messageId, data);
+}
+
+// Notify on load/unload _only_ happens with the profile method, so we can reuse that proto
+// This can be revisited later when we think a little bit about autologin
+void NotifyCharacterLoad(const char* Profile, const char* Account, const char* Server, const char* Character)
+{
+	proto::autologin::ProfileMethod profile;
+	profile.set_profile(Profile);
+	profile.set_account(Account);
+	proto::autologin::LoginTarget& target = *profile.mutable_target();
+	target.set_server(Server);
+	target.set_character(Character);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_PROFILE_LOADED, profile);
+}
+
+void NotifyCharacterUnload(const char* Profile, const char* Account, const char* Server, const char* Character)
+{
+	proto::autologin::ProfileMethod profile;
+	profile.set_profile(Profile);
+	profile.set_account(Account);
+	proto::autologin::LoginTarget& target = *profile.mutable_target();
+	target.set_server(Server);
+	target.set_character(Character);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_PROFILE_UNLOADED, profile);
+}
+
+void NotifyCharacterUpdate(int Class, int Level)
+{
+	proto::autologin::CharacterInfoMissive info;
+	info.set_class_(Class);
+	info.set_level(Level);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_PROFILE_CHARINFO, info);
+}
+
+void LoginServer(const char* Login, const char* Pass, const char* Server)
+{
+	proto::autologin::StartInstanceMissive start;
+	proto::autologin::DirectMethod& method = *start.mutable_direct();
+	method.set_login(Login);
+	method.set_password(Pass);
+	proto::autologin::LoginTarget& target = *method.mutable_target();
+	target.set_server(Server);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_START_INSTANCE, start);
+}
+
+void LoginCharacter(const char* Login, const char* Pass, const char* Server, const char* Character)
+{
+	proto::autologin::StartInstanceMissive start;
+	proto::autologin::DirectMethod& method = *start.mutable_direct();
+	method.set_login(Login);
+	method.set_password(Pass);
+	proto::autologin::LoginTarget& target = *method.mutable_target();
+	target.set_server(Server);
+	target.set_character(Character);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_START_INSTANCE, start);
+}
+
+void LoginProfile(const char* Profile, const char* Server, const char* Character)
+{
+	proto::autologin::StartInstanceMissive start;
+	proto::autologin::ProfileMethod& method = *start.mutable_profile();
+	method.set_profile(Profile);
+	proto::autologin::LoginTarget& target = *method.mutable_target();
+	target.set_server(Server);
+	target.set_character(Character);
+
+	Post(AutoLoginMessageId::MSG_AUTOLOGIN_START_INSTANCE, start);
+}
+
 void PerformSwitch(const std::string& ServerName, const std::string& CharacterName)
 {
-	pipeclient::NotifyCharacterUnload(
+	NotifyCharacterUnload(
 		std::string(Login::profile()).c_str(),
 		std::string(Login::account()).c_str(),
 		std::string(Login::server()).c_str(),
@@ -67,7 +151,7 @@ void PerformSwitch(const std::string& ServerName, const std::string& CharacterNa
 
 	Login::dispatch(SetLoginInformation(ServerName, CharacterName));
 
-	pipeclient::NotifyCharacterLoad(
+	NotifyCharacterLoad(
 		std::string(Login::profile()).c_str(),
 		std::string(Login::account()).c_str(),
 		std::string(Login::server()).c_str(),
@@ -200,7 +284,7 @@ void Cmd_Loginchar(SPAWNINFO* pChar, char* szLine)
 			fmt::format("{}:{}_Blob", record.serverName, record.characterName),
 			INIFileName);
 
-		pipeclient::LoginProfile(
+		LoginProfile(
 			record.profileName.c_str(),
 			record.serverName.c_str(),
 			record.characterName.c_str());
@@ -208,12 +292,12 @@ void Cmd_Loginchar(SPAWNINFO* pChar, char* szLine)
 	else if (!record.serverName.empty() && !record.accountName.empty() && !record.accountPassword.empty())
 	{
 		if (record.characterName.empty())
-			pipeclient::LoginServer(
+			LoginServer(
 				record.accountName.c_str(),
 				record.accountPassword.c_str(),
 				record.serverName.c_str());
 		else
-			pipeclient::LoginCharacter(
+			LoginCharacter(
 				record.accountName.c_str(),
 				record.accountPassword.c_str(),
 				record.serverName.c_str(),
@@ -241,7 +325,7 @@ void Cmd_Loginchar(SPAWNINFO* pChar, char* szLine)
 		}
 
 		if (!record.profileName.empty())
-			pipeclient::LoginProfile(
+			LoginProfile(
 				record.profileName.c_str(),
 				record.serverName.c_str(),
 				record.characterName.c_str());
@@ -426,11 +510,17 @@ PLUGIN_API void InitializePlugin()
 	}
 
 	ReenableTime = MQGetTickCount64() + STEP_DELAY;
+
+	s_autologinMailbox = pipeclient::AddMailbox("autologin",
+		[](ProtoMessagePtr message)
+		{
+			// autologin doesn't actually take message inputs yet...
+		});
 }
 
 PLUGIN_API void ShutdownPlugin()
 {
-	pipeclient::NotifyCharacterUnload(
+	NotifyCharacterUnload(
 		std::string(Login::profile()).c_str(),
 		std::string(Login::account()).c_str(),
 		std::string(Login::server()).c_str(),
@@ -452,6 +542,9 @@ PLUGIN_API void ShutdownPlugin()
 	RemoveDetour(pfnWritePrivateProfileStringA);
 
 	LoginReset();
+
+	pipeclient::RemoveMailbox("autologin");
+	s_autologinMailbox.reset();
 }
 
 void SendWndNotification(CXWnd* pWnd, CXWnd* sender, uint32_t msg, void* data)
@@ -575,7 +668,7 @@ PLUGIN_API void OnPulse()
 	{
 		Class = pLocalPlayer->GetClass();
 		Level = pLocalPlayer->Level;
-		pipeclient::NotifyCharacterUpdate(std::to_string(Class).c_str(), std::to_string(Level).c_str());
+		NotifyCharacterUpdate(Class, Level);
 	}
 
 	if (gbInForeground && GetAsyncKeyState(VK_HOME) & 1)

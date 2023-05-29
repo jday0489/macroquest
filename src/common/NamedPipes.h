@@ -53,6 +53,7 @@ class PipeMessage : public std::enable_shared_from_this<PipeMessage>
 public:
 	PipeMessage() = default;
 	PipeMessage(MQMessageId messageId, const void* data, size_t length);
+	PipeMessage(const MQMessageHeader& header, const void* data, size_t length);
 
 	virtual ~PipeMessage();
 
@@ -61,7 +62,9 @@ public:
 	bool Parse(std::unique_ptr<uint8_t[]> buffer, size_t length);
 	bool Parse(const std::vector<std::pair<std::unique_ptr<uint8_t[]>, size_t>>& buffers);
 
+	void Init(const void* data, size_t length);
 	void Init(MQMessageId messageId, const void* data, size_t length);
+	void Init(const MQMessageHeader& header, const void* data, size_t length);
 
 	bool IsValid() const { return m_valid; }
 
@@ -226,6 +229,9 @@ public:
 	// (optional) For NamedPipeServer: notification of an incoming connection.
 	virtual void OnIncomingConnection(int connectionId, int processid) {}
 
+	// (optional) For NamedPipeServer: notification of a closing connection
+	virtual void OnConnectionClosed(int connectionId, int processId) {}
+
 	// (optional) For NamedPipeClient: Called when connection is established
 	virtual void OnClientConnected() {}
 };
@@ -308,8 +314,12 @@ public:
 
 	virtual void PostToMainThread(std::function<void()> callback) override;
 
-	void SendMessage(int connectionId, std::shared_ptr<PipeMessage> message);
+	void SendMessage(int connectionId, PipeMessagePtr message);
 	void SendMessage(int connectionId, MQMessageId messageId, const void* data, size_t dataLength);
+
+	void BroadcastMessage(const PipeMessagePtr& message);
+	void BroadcastMessage(MQMessageId messageId, const void* data, size_t dataLength);
+
 private:
 	void NamedPipeThread() override;
 
@@ -339,9 +349,11 @@ public:
 	~NamedPipeClient();
 
 	// Send a simple message to the server
+	void SendMessage(PipeMessagePtr message);
 	void SendMessage(MQMessageId messageId, const void* data, size_t dataLength);
 
 	// Send a call-and-response message to the server
+	void SendMessageWithResponse(PipeMessagePtr message, const PipeMessageResponseCb& response);
 	void SendMessageWithResponse(MQMessageId messageId, const void* data, size_t dataLength,
 		const PipeMessageResponseCb& response);
 
