@@ -81,7 +81,7 @@ static void lua_delay(sol::object delayObj, sol::object conditionObj, sol::this_
 	{
 		if (!thread_ptr->GetAllowYield())
 		{
-			luaL_error(s.lua_state(), "Attempted to yield from non-yieldable thread");
+			luaL_error(s, "Attempted to yield from non-yieldable thread");
 			return;
 		}
 
@@ -252,7 +252,6 @@ static sol::table lua_getFilteredSpawns(sol::this_state L, std::optional<sol::fu
 //============================================================================
 
 #pragma region Event Bindings
-
 
 static void lua_doevents(sol::variadic_args va, sol::this_state s)
 {
@@ -494,7 +493,6 @@ static void lua_pickle(sol::this_state L, std::string_view file_path, sol::table
 }
 
 #pragma endregion
-
 
 //============================================================================
 

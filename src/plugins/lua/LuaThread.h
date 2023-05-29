@@ -16,7 +16,9 @@
 
 #include "LuaCommon.h"
 
+#include "mq/api/MacroAPI.h"
 #include "mq/base/GlobalBuffer.h"
+#include "mq/base/String.h"
 
 #include <sol/sol.hpp>
 
@@ -90,6 +92,8 @@ public:
 	LuaThread(this_is_private&&, LuaEnvironmentSettings* environment);
 	static std::shared_ptr<LuaThread> Create(LuaEnvironmentSettings* environment);
 
+	~LuaThread();
+
 	LuaThread(const LuaThread&) = delete;
 	LuaThread& operator=(const LuaThread&) = delete;
 
@@ -103,6 +107,7 @@ public:
 	const std::string& GetScript() const { return m_path; }
 	sol::state_view GetState() const;
 	sol::thread GetLuaThread() const;
+
 	// Buffer to get swapped in for DataTypeTemp
 	char buffer[SGlobalBuffer::bufferSize] = { 0 };
 
@@ -146,6 +151,12 @@ public:
 	static std::string GetCanonicalScriptName(std::string_view script, const std::filesystem::path& luaDir);
 	void UpdateLuaDir(const std::filesystem::path& newLuaDir);
 
+	// TLOs
+	bool AddTopLevelObject(const char* name, MQTopLevelObjectFunction func);
+	bool RemoveTopLevelObject(const char* name);
+
+	void RemoveAllDataObjects();
+
 private:
 	RunResult RunOnce();
 
@@ -184,6 +195,9 @@ private:
 	std::unique_ptr<LuaEventProcessor> m_eventProcessor;
 	std::unique_ptr<LuaImGuiProcessor> m_imguiProcessor;
 	LuaCoroutine* m_currentCoroutine = nullptr;
+
+	// datatypes
+	ci_unordered::set<std::string> m_registeredTLOs;
 };
 
 //============================================================================
@@ -199,5 +213,33 @@ inline std::shared_ptr<LuaThread> LuaThread::get_from(sol::state_view s)
 	std::optional<LuaThreadRef> thread = s["mqthread"];
 	return thread.value_or(LuaThreadRef()).lock();
 }
+
+//============================================================================
+
+class ScopedYieldDisabler
+{
+	bool m_origAllowYield = true;
+	std::shared_ptr<LuaThread> m_threadPtr;
+
+public:
+	ScopedYieldDisabler(const std::shared_ptr<LuaThread>& thread_ptr)
+		: m_threadPtr(thread_ptr)
+	{
+		if (m_threadPtr)
+		{
+			m_origAllowYield = m_threadPtr->GetAllowYield();
+			thread_ptr->SetAllowYield(false);
+		}
+	}
+
+	~ScopedYieldDisabler()
+	{
+		if (m_threadPtr)
+		{
+			m_threadPtr->SetAllowYield(m_origAllowYield);
+		}
+	}
+};
+
 
 } // namespace mq::lua
